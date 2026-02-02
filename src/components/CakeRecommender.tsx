@@ -26,12 +26,12 @@ export const CakeRecommender = () => {
       title: "What's the occasion?",
       key: 'occasion',
       options: [
-        { value: 'birthday', label: '🎂 Birthday', emoji: '🎂' },
-        { value: 'wedding', label: '💒 Wedding', emoji: '💒' },
-        { value: 'anniversary', label: '💕 Anniversary', emoji: '💕' },
-        { value: 'valentine', label: '❤️ Valentine', emoji: '❤️' },
-        { value: 'corporate', label: '💼 Corporate', emoji: '💼' },
-        { value: 'everyday', label: '🍰 Just Because', emoji: '🍰' }
+        { value: 'birthday', label: '🎂 Birthday' },
+        { value: 'wedding', label: '💒 Wedding' },
+        { value: 'anniversary', label: '💕 Anniversary' },
+        { value: 'valentine', label: '❤️ Valentine' },
+        { value: 'corporate', label: '💼 Corporate' },
+        { value: 'everyday', label: '🍰 Just Because' }
       ]
     },
     {

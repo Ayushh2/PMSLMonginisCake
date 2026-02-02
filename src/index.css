@@ -44,7 +44,24 @@ html {
   scroll-behavior: smooth;
 }
 
-body {
+/*
+  Mobile layout fix:
+  Some sections use absolutely-positioned / animated elements (hearts, decorations, etc.).
+  On some mobile browsers those can expand the *layout* width, which then shows up as a
+  "gap" on the right side.
+  
+  Force the document/root to never exceed the viewport width and disable horizontal
+  scrolling at the document level (html + body), not just body.
+*/
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
 }
 
