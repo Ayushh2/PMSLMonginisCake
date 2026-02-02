@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --font-heading: 'Cormorant Garamond', serif;
+  --font-body: 'Nunito', sans-serif;
+  --font-script: 'Great Vibes', cursive;
+  --font-accent: 'Marcellus', serif;
+  
+  --color-magenta-50: #fdf2f8;
+  --color-magenta-100: #fce7f3;
+  --color-magenta-200: #fbcfe8;
+  --color-magenta-300: #f9a8d4;
+  --color-magenta-400: #f472b6;
+  --color-magenta-500: #ec4899;
+  --color-magenta-600: #db2777;
+  --color-magenta-700: #be185d;
+  --color-magenta-800: #9d174d;
+  --color-magenta-900: #831843;
+  --color-magenta-950: #500724;
+}
+
+* {
+  font-family: 'Nunito', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 600;
+}
+
+.font-playfair {
+  font-family: 'Cormorant Garamond', serif !important;
+}
+
+.font-script {
+  font-family: 'Great Vibes', cursive !important;
+}
+
+.font-accent {
+  font-family: 'Marcellus', serif !important;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fdf2f8;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #db2777;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #be185d;
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(219, 39, 119, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(219, 39, 119, 0.6); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes heart-float {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
+  50% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-heart-float {
+  animation: heart-float 3s ease-in-out infinite;
+}
+
+/* Monginis watermark */
+.cake-image-container::after {
+  content: 'Monginis';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 10px;
+  color: white;
+  background: rgba(219, 39, 119, 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
