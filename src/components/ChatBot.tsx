@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
@@ -11,7 +11,7 @@ interface Message {
 const initialMessages: Message[] = [
   {
     id: 1,
-    text: "Hello! 👋 I'm your Monginis assistant. How can I help you today?",
+    text: "Hello! I'm your Monginis assistant. How can I help you today?",
     isBot: true,
     options: ['Order Tracking', 'Cake Suggestions', 'Delivery Info', 'Custom Orders']
   }
@@ -27,7 +27,7 @@ const botResponses: Record<string, { text: string; options?: string[] }> = {
     options: ['Birthday', 'Wedding', 'Anniversary', 'Valentine', 'Just Because']
   },
   'Delivery Info': {
-    text: "We offer same-day delivery in most cities! Delivery is FREE on orders above ₹500. Orders placed before 6 PM are delivered the same day.",
+    text: "We offer same-day delivery in most cities! Delivery is FREE on orders above Rs.500. Orders placed before 6 PM are delivered the same day.",
     options: ['Check Delivery Areas', 'Delivery Charges', 'Back to Menu']
   },
   'Custom Orders': {
@@ -35,19 +35,19 @@ const botResponses: Record<string, { text: string; options?: string[] }> = {
     options: ['Request Callback', 'Upload Design', 'Back to Menu']
   },
   'Birthday': {
-    text: "🎂 For birthdays, I recommend our Rainbow Surprise Cake or the Royal Chocolate Truffle! Both are customer favorites.",
+    text: "For birthdays, I recommend our Rainbow Surprise Cake or the Royal Chocolate Truffle! Both are customer favorites.",
     options: ['View Birthday Cakes', 'Other Occasion', 'Back to Menu']
   },
   'Wedding': {
-    text: "💒 Our Wedding Elegance Tier cakes are stunning! We offer free consultation for wedding orders above ₹5000.",
+    text: "Our Wedding Elegance Tier cakes are stunning! We offer free consultation for wedding orders above Rs.5000.",
     options: ['View Wedding Cakes', 'Book Consultation', 'Back to Menu']
   },
   'Anniversary': {
-    text: "💕 For anniversaries, the Heart-Shaped Love Cake or Pink Velvet Dream would be perfect!",
+    text: "For anniversaries, the Heart-Shaped Love Cake or Pink Velvet Dream would be perfect!",
     options: ['View Anniversary Cakes', 'Other Occasion', 'Back to Menu']
   },
   'Valentine': {
-    text: "❤️ Make it special with our Valentine Rose Cake or Heart Chocolate Box! Order now for guaranteed delivery.",
+    text: "Make it special with our Valentine Rose Cake or Heart Chocolate Box! Order now for guaranteed delivery.",
     options: ['View Valentine Collection', 'Other Occasion', 'Back to Menu']
   },
   'Back to Menu': {
@@ -61,7 +61,7 @@ export const ChatBot = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState('');
 
-  const handleOptionClick = (option: string) => {
+  const handleOptionClick = useCallback((option: string) => {
     // Add user message
     const userMessage: Message = {
       id: Date.now(),
@@ -84,9 +84,9 @@ export const ChatBot = () => {
       };
       setMessages(prev => [...prev, botMessage]);
     }, 500);
-  };
+  }, []);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -107,7 +107,7 @@ export const ChatBot = () => {
       };
       setMessages(prev => [...prev, botMessage]);
     }, 1000);
-  };
+  }, [inputValue]);
 
   return (
     <>
@@ -248,4 +248,43 @@ export const ChatBot = () => {
       </AnimatePresence>
     </>
   );
+};
+
+// Lazy wrapper that only loads heavy parts after idle/interaction
+export const LazyChatBot = () => {
+  const [shouldMount, setShouldMount] = useState(false);
+
+  useEffect(() => {
+    // Load after idle or first user interaction
+    const scheduleLoad = () => {
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => setShouldMount(true), { timeout: 3000 });
+      } else {
+        setTimeout(() => setShouldMount(true), 2000);
+      }
+    };
+
+    // Also mount on first interaction
+    const handleInteraction = () => {
+      setShouldMount(true);
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+    };
+
+    window.addEventListener('click', handleInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true, passive: true });
+    window.addEventListener('scroll', handleInteraction, { once: true, passive: true });
+    
+    scheduleLoad();
+
+    return cleanup;
+  }, []);
+
+  if (!shouldMount) return null;
+  return <ChatBot />;
 };

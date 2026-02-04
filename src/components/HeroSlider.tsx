@@ -37,10 +37,12 @@ const slides = [
   }
 ];
 
-// Preload images for smooth transitions
-const preloadImages = (imageUrls: string[]) => {
-  imageUrls.forEach((url) => {
-    const img = new Image();
+// Preload only the first and next images for better initial performance
+const preloadImage = (url: string): Promise<void> => {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
     img.src = url;
   });
 };
@@ -81,25 +83,27 @@ export const HeroSlider = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [imagesLoaded, setImagesLoaded] = useState<Set<number>>(new Set([0]));
 
-  // Preload all images on mount
+  // Preload only first slide eagerly, next slide on demand
   useEffect(() => {
-    const imageUrls = slides.map((slide) => slide.image);
-    preloadImages(imageUrls);
+    // Preload first slide immediately
+    preloadImage(slides[0].image).then(() => {
+      setIsLoaded(true);
+      setImagesLoaded(new Set([0]));
+    });
     
-    // Mark as loaded after a brief delay to ensure first image is ready
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
+    // Preload second slide after first is loaded
+    preloadImage(slides[1].image).then(() => {
+      setImagesLoaded((prev) => new Set([...prev, 1]));
+    });
   }, []);
 
-  // Preload next image
+  // Preload next slide when current changes
   useEffect(() => {
     const nextIndex = (current + 1) % slides.length;
     if (!imagesLoaded.has(nextIndex)) {
-      const img = new Image();
-      img.onload = () => {
+      preloadImage(slides[nextIndex].image).then(() => {
         setImagesLoaded((prev) => new Set([...prev, nextIndex]));
-      };
-      img.src = slides[nextIndex].image;
+      });
     }
   }, [current, imagesLoaded]);
 
@@ -263,14 +267,15 @@ export const HeroSlider = () => {
         </svg>
       </button>
 
-      {/* Preload hidden images for instant transitions */}
+      {/* Preload only first and second slide for instant transitions */}
       <div className="hidden" aria-hidden="true">
-        {slides.map((slide, index) => (
+        {slides.slice(0, 2).map((slide, index) => (
           <img
             key={slide.id}
             src={slide.image}
             alt=""
             loading={index === 0 ? 'eager' : 'lazy'}
+            decoding="async"
           />
         ))}
       </div>

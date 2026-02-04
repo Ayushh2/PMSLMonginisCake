@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { products, Product } from '../data/products';
@@ -21,51 +21,51 @@ export const CakeRecommender = () => {
   });
   const [recommendations, setRecommendations] = useState<Product[]>([]);
 
-  const questions = [
+  const questions = useMemo(() => [
     {
       title: "What's the occasion?",
       key: 'occasion',
       options: [
-        { value: 'birthday', label: '🎂 Birthday' },
-        { value: 'wedding', label: '💒 Wedding' },
-        { value: 'anniversary', label: '💕 Anniversary' },
-        { value: 'valentine', label: '❤️ Valentine' },
-        { value: 'corporate', label: '💼 Corporate' },
-        { value: 'everyday', label: '🍰 Just Because' }
+        { value: 'birthday', label: 'Birthday', emoji: '🎂' },
+        { value: 'wedding', label: 'Wedding', emoji: '💒' },
+        { value: 'anniversary', label: 'Anniversary', emoji: '💕' },
+        { value: 'valentine', label: 'Valentine', emoji: '❤️' },
+        { value: 'corporate', label: 'Corporate', emoji: '💼' },
+        { value: 'everyday', label: 'Just Because', emoji: '🍰' }
       ]
     },
     {
       title: "What's your budget?",
       key: 'budget',
       options: [
-        { value: '0-500', label: 'Under ₹500', emoji: '💰' },
-        { value: '500-1000', label: '₹500 - ₹1,000', emoji: '💵' },
-        { value: '1000-2000', label: '₹1,000 - ₹2,000', emoji: '💎' },
-        { value: '2000+', label: 'Above ₹2,000', emoji: '👑' }
+        { value: '0-500', label: 'Under Rs.500', emoji: '💰' },
+        { value: '500-1000', label: 'Rs.500 - Rs.1,000', emoji: '💵' },
+        { value: '1000-2000', label: 'Rs.1,000 - Rs.2,000', emoji: '💎' },
+        { value: '2000+', label: 'Above Rs.2,000', emoji: '👑' }
       ]
     },
     {
       title: 'Preferred flavor?',
       key: 'flavor',
       options: [
-        { value: 'chocolate', label: '🍫 Chocolate', emoji: '🍫' },
-        { value: 'vanilla', label: '🍦 Vanilla', emoji: '🍦' },
-        { value: 'fruit', label: '🍓 Fruity', emoji: '🍓' },
-        { value: 'any', label: '🌈 Surprise Me', emoji: '🌈' }
+        { value: 'chocolate', label: 'Chocolate', emoji: '🍫' },
+        { value: 'vanilla', label: 'Vanilla', emoji: '🍦' },
+        { value: 'fruit', label: 'Fruity', emoji: '🍓' },
+        { value: 'any', label: 'Surprise Me', emoji: '🌈' }
       ]
     },
     {
       title: 'Dietary preferences?',
       key: 'dietary',
       options: [
-        { value: 'any', label: '🍰 No Preference', emoji: '🍰' },
-        { value: 'eggless', label: '🥚 Eggless', emoji: '🥚' },
-        { value: 'vegan', label: '🌱 Vegan', emoji: '🌱' }
+        { value: 'any', label: 'No Preference', emoji: '🍰' },
+        { value: 'eggless', label: 'Eggless', emoji: '🥚' },
+        { value: 'vegan', label: 'Vegan', emoji: '🌱' }
       ]
     }
-  ];
+  ], []);
 
-  const handleSelect = (key: string, value: string) => {
+  const handleSelect = useCallback((key: string, value: string) => {
     const newPreferences = { ...preferences, [key]: value };
     setPreferences(newPreferences);
 
@@ -96,13 +96,13 @@ export const CakeRecommender = () => {
       setRecommendations(filtered.length > 0 ? filtered : products.slice(0, 3));
       setStep(questions.length);
     }
-  };
+  }, [preferences, step, questions]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setStep(0);
     setPreferences({ occasion: '', budget: '', flavor: '', dietary: '' });
     setRecommendations([]);
-  };
+  }, []);
 
   return (
     <>
@@ -260,4 +260,43 @@ export const CakeRecommender = () => {
       </AnimatePresence>
     </>
   );
+};
+
+// Lazy wrapper that only loads heavy parts after idle/interaction
+export const LazyCakeRecommender = () => {
+  const [shouldMount, setShouldMount] = useState(false);
+
+  useEffect(() => {
+    // Load after idle or first user interaction
+    const scheduleLoad = () => {
+      if ('requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(() => setShouldMount(true), { timeout: 3000 });
+      } else {
+        setTimeout(() => setShouldMount(true), 2000);
+      }
+    };
+
+    // Also mount on first interaction
+    const handleInteraction = () => {
+      setShouldMount(true);
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+    };
+
+    window.addEventListener('click', handleInteraction, { once: true, passive: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true, passive: true });
+    window.addEventListener('scroll', handleInteraction, { once: true, passive: true });
+    
+    scheduleLoad();
+
+    return cleanup;
+  }, []);
+
+  if (!shouldMount) return null;
+  return <CakeRecommender />;
 };

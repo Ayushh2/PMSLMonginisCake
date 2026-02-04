@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, Clock, Plus, Minus, Check } from 'lucide-react';
@@ -12,9 +12,11 @@ interface ProductCardProps {
   index?: number;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) => {
+// Memoize ProductCard to prevent unnecessary rerenders from parent lists
+export const ProductCard: React.FC<ProductCardProps> = memo(({ product, index = 0 }) => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
-  const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
+  const { addToCart, updateQuantity, removeFromCart, state } = useCart();
+  const cartItems = state.items;
   const isWishlisted = isInWishlist(product.id);
   
   const [showControls, setShowControls] = useState(false);
@@ -23,7 +25,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) 
 
   // Get current quantity from cart
   const getCartQuantity = useCallback(() => {
-    const item = cartItems?.find((item: any) => item.id === product.id || item.productId === product.id);
+    const item = cartItems?.find((cartItem) => cartItem.product.id === product.id);
     return item?.quantity || 0;
   }, [cartItems, product.id]);
 
@@ -383,6 +385,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, index = 0 }) 
       </Link>
     </motion.div>
   );
-};
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;

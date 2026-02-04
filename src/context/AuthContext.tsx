@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 
 export interface User {
   id: string;
@@ -66,70 +66,70 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalView, setAuthModalView] = useState<AuthModalView>('login-options');
+  const [authModalView, setAuthModalViewState] = useState<AuthModalView>('login-options');
 
-  const login = (userData: User) => {
+  const login = useCallback((userData: User) => {
     setUser(userData);
     setIsAuthModalOpen(false);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
-  };
+  }, []);
 
-  const openAuthModal = (view: AuthModalView = 'login-options') => {
-    setAuthModalView(view);
+  const openAuthModal = useCallback((view: AuthModalView = 'login-options') => {
+    setAuthModalViewState(view);
     setIsAuthModalOpen(true);
-  };
+  }, []);
 
-  const closeAuthModal = () => {
+  const closeAuthModal = useCallback(() => {
     setIsAuthModalOpen(false);
-    setTimeout(() => setAuthModalView('login-options'), 300);
-  };
+    setTimeout(() => setAuthModalViewState('login-options'), 300);
+  }, []);
 
-  const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      setUser({ ...user, ...updates });
-    }
-  };
+  const setAuthModalView = useCallback((view: AuthModalView) => {
+    setAuthModalViewState(view);
+  }, []);
 
-  const addAddress = (address: Address) => {
-    if (user) {
-      setUser({ ...user, addresses: [...user.addresses, address] });
-    }
-  };
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : null);
+  }, []);
 
-  const removeAddress = (id: string) => {
-    if (user) {
-      setUser({ ...user, addresses: user.addresses.filter(a => a.id !== id) });
-    }
-  };
+  const addAddress = useCallback((address: Address) => {
+    setUser(prev => prev ? { ...prev, addresses: [...prev.addresses, address] } : null);
+  }, []);
 
-  const updateAddress = (id: string, updates: Partial<Address>) => {
-    if (user) {
-      setUser({
-        ...user,
-        addresses: user.addresses.map(a => a.id === id ? { ...a, ...updates } : a)
-      });
-    }
-  };
+  const removeAddress = useCallback((id: string) => {
+    setUser(prev => prev ? { ...prev, addresses: prev.addresses.filter(a => a.id !== id) } : null);
+  }, []);
+
+  const updateAddress = useCallback((id: string, updates: Partial<Address>) => {
+    setUser(prev => prev ? {
+      ...prev,
+      addresses: prev.addresses.map(a => a.id === id ? { ...a, ...updates } : a)
+    } : null);
+  }, []);
+
+  const isAuthenticated = useMemo(() => !!user, [user]);
+
+  const value = useMemo(() => ({
+    user,
+    isAuthenticated,
+    isAuthModalOpen,
+    authModalView,
+    login,
+    logout,
+    openAuthModal,
+    closeAuthModal,
+    setAuthModalView,
+    updateUser,
+    addAddress,
+    removeAddress,
+    updateAddress
+  }), [user, isAuthenticated, isAuthModalOpen, authModalView, login, logout, openAuthModal, closeAuthModal, setAuthModalView, updateUser, addAddress, removeAddress, updateAddress]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      isAuthenticated: !!user,
-      isAuthModalOpen,
-      authModalView,
-      login,
-      logout,
-      openAuthModal,
-      closeAuthModal,
-      setAuthModalView,
-      updateUser,
-      addAddress,
-      removeAddress,
-      updateAddress
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

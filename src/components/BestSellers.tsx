@@ -1,10 +1,12 @@
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { products } from '../data/products';
 import { ProductCard } from './ProductCard';
 
-export const BestSellers = () => {
-  const bestSellers = products.filter(p => p.isBestSeller).slice(0, 8);
+export const BestSellers = React.memo(() => {
+  // Memoize filtered products to avoid recalculation
+  const bestSellers = useMemo(() => products.filter(p => p.isBestSeller).slice(0, 8), []);
 
   return (
     <section className="py-20 bg-white">
@@ -66,4 +68,6 @@ export const BestSellers = () => {
       </div>
     </section>
   );
-};
+});
+
+BestSellers.displayName = 'BestSellers';

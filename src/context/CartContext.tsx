@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useCallback, useMemo } from 'react';
 import { Product } from '../data/products';
 
 interface CartItem {
@@ -69,41 +69,43 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(cartReducer, { items: [], isOpen: false });
 
-  const addToCart = (product: Product, weight: string, flavor: string, quantity = 1) => {
+  const addToCart = useCallback((product: Product, weight: string, flavor: string, quantity = 1) => {
     dispatch({ type: 'ADD_ITEM', payload: { product, weight, flavor, quantity } });
-  };
+  }, []);
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = useCallback((productId: string) => {
     dispatch({ type: 'REMOVE_ITEM', payload: productId });
-  };
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } });
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     dispatch({ type: 'CLEAR_CART' });
-  };
+  }, []);
 
-  const toggleCart = () => {
+  const toggleCart = useCallback(() => {
     dispatch({ type: 'TOGGLE_CART' });
-  };
+  }, []);
 
-  const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const totalItems = useMemo(() => state.items.reduce((sum, item) => sum + item.quantity, 0), [state.items]);
+  const totalPrice = useMemo(() => state.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0), [state.items]);
+
+  const value = useMemo(() => ({
+    state,
+    dispatch,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    toggleCart,
+    totalItems,
+    totalPrice
+  }), [state, addToCart, removeFromCart, updateQuantity, clearCart, toggleCart, totalItems, totalPrice]);
 
   return (
-    <CartContext.Provider value={{
-      state,
-      dispatch,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      toggleCart,
-      totalItems,
-      totalPrice
-    }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );

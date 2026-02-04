@@ -1,9 +1,23 @@
-import { Suspense, useRef, useState } from 'react';
+import { Suspense, useRef, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { X, RotateCcw, Move3D, Sparkles } from 'lucide-react';
 import * as THREE from 'three';
+
+// Pre-computed deterministic sprinkle data to avoid Math.random in render
+const SPRINKLE_DATA = Array.from({ length: 30 }, (_, i) => {
+  // Use deterministic seed based on index
+  const seed = (i * 137.5) % 1;
+  const angle = seed * Math.PI * 2;
+  const radius = ((i * 73) % 85) / 100;
+  const rotX = ((i * 31) % 100) / 100 * Math.PI;
+  const rotY = ((i * 47) % 100) / 100 * Math.PI;
+  const rotZ = ((i * 61) % 100) / 100 * Math.PI;
+  return { angle, radius, rotX, rotY, rotZ };
+});
+
+const SPRINKLE_COLORS = ['#ff1493', '#00bfff', '#ffd700', '#32cd32', '#ff6347'];
 
 interface Cake3DViewerProps {
   isOpen: boolean;
@@ -12,66 +26,78 @@ interface Cake3DViewerProps {
   cakeType?: 'chocolate' | 'vanilla' | 'strawberry' | 'redvelvet' | 'butterscotch';
 }
 
+// Pre-computed cake colors to avoid object recreation
+const CAKE_COLORS = {
+  chocolate: { base: '#4a2c1f', middle: '#6b3d2e', top: '#8b4513', frosting: '#d4a574' },
+  vanilla: { base: '#f5deb3', middle: '#ffe4b5', top: '#fff8dc', frosting: '#ffffff' },
+  strawberry: { base: '#c41e3a', middle: '#dc143c', top: '#ff69b4', frosting: '#ffb6c1' },
+  redvelvet: { base: '#8b0000', middle: '#a52a2a', top: '#cd5c5c', frosting: '#fffaf0' },
+  butterscotch: { base: '#d4a574', middle: '#deb887', top: '#f5deb3', frosting: '#8b4513' },
+} as const;
+
+// Pre-computed decoration angles
+const DECO_ANGLES = Array.from({ length: 12 }, (_, i) => (i / 12) * Math.PI * 2);
+const ROSE_ANGLES = Array.from({ length: 6 }, (_, i) => (i / 6) * Math.PI * 2);
+const PETAL_ANGLES = Array.from({ length: 5 }, (_, j) => (j / 5) * Math.PI * 2);
+const CANDLE_ANGLES = Array.from({ length: 5 }, (_, i) => (i / 5) * Math.PI * 2);
+
 const CakeModel = ({ cakeType = 'chocolate' }: { cakeType: string }) => {
   const groupRef = useRef<THREE.Group>(null);
+  const { invalidate } = useThree();
   
   useFrame((state) => {
     if (groupRef.current) {
       groupRef.current.rotation.y = state.clock.getElapsedTime() * 0.3;
+      invalidate(); // Trigger render only when rotating
     }
   });
 
-  const cakeColors = {
-    chocolate: { base: '#4a2c1f', middle: '#6b3d2e', top: '#8b4513', frosting: '#d4a574' },
-    vanilla: { base: '#f5deb3', middle: '#ffe4b5', top: '#fff8dc', frosting: '#ffffff' },
-    strawberry: { base: '#c41e3a', middle: '#dc143c', top: '#ff69b4', frosting: '#ffb6c1' },
-    redvelvet: { base: '#8b0000', middle: '#a52a2a', top: '#cd5c5c', frosting: '#fffaf0' },
-    butterscotch: { base: '#d4a574', middle: '#deb887', top: '#f5deb3', frosting: '#8b4513' },
-  };
-
-  const colors = cakeColors[cakeType as keyof typeof cakeColors] || cakeColors.chocolate;
+  const colors = useMemo(() => 
+    CAKE_COLORS[cakeType as keyof typeof CAKE_COLORS] || CAKE_COLORS.chocolate,
+    [cakeType]
+  );
 
   return (
     <group ref={groupRef} position={[0, -0.5, 0]}>
-      {/* Cake plate */}
+      {/* Cake plate - reduced segments 64->32 */}
       <mesh position={[0, -0.15, 0]} receiveShadow>
-        <cylinderGeometry args={[2.2, 2.2, 0.1, 64]} />
+        <cylinderGeometry args={[2.2, 2.2, 0.1, 32]} />
         <meshStandardMaterial color="#f0f0f0" metalness={0.3} roughness={0.2} />
       </mesh>
 
       {/* Bottom cake layer */}
       <mesh position={[0, 0.3, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.8, 1.8, 0.7, 64]} />
+        <cylinderGeometry args={[1.8, 1.8, 0.7, 32]} />
         <meshStandardMaterial color={colors.base} roughness={0.6} />
       </mesh>
 
       {/* Bottom layer frosting ring */}
       <mesh position={[0, 0.65, 0]}>
-        <torusGeometry args={[1.75, 0.08, 16, 64]} />
+        <torusGeometry args={[1.75, 0.08, 12, 32]} />
         <meshStandardMaterial color={colors.frosting} roughness={0.3} />
       </mesh>
 
       {/* Middle cake layer */}
       <mesh position={[0, 1.0, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.4, 1.4, 0.6, 64]} />
+        <cylinderGeometry args={[1.4, 1.4, 0.6, 32]} />
         <meshStandardMaterial color={colors.middle} roughness={0.6} />
       </mesh>
 
       {/* Middle layer frosting ring */}
       <mesh position={[0, 1.3, 0]}>
-        <torusGeometry args={[1.35, 0.07, 16, 64]} />
+        <torusGeometry args={[1.35, 0.07, 12, 32]} />
         <meshStandardMaterial color={colors.frosting} roughness={0.3} />
       </mesh>
 
       {/* Top cake layer */}
       <mesh position={[0, 1.6, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[1.0, 1.0, 0.5, 64]} />
+        <cylinderGeometry args={[1.0, 1.0, 0.5, 32]} />
         <meshStandardMaterial color={colors.top} roughness={0.5} />
       </mesh>
 
       {/* Top frosting swirl */}
       <mesh position={[0, 1.9, 0]}>
-        <cylinderGeometry args={[0.9, 1.0, 0.1, 64]} />
+        <cylinderGeometry args={[0.9, 1.0, 0.1, 32]} />
         <meshStandardMaterial color={colors.frosting} roughness={0.2} />
       </mesh>
 
@@ -123,9 +149,9 @@ const CakeModel = ({ cakeType = 'chocolate' }: { cakeType: string }) => {
         );
       })}
 
-      {/* Center cherry */}
+      {/* Center cherry - reduced segments 32->16 */}
       <mesh position={[0, 2.15, 0]} castShadow>
-        <sphereGeometry args={[0.18, 32, 32]} />
+        <sphereGeometry args={[0.18, 16, 16]} />
         <meshStandardMaterial color="#dc143c" roughness={0.2} metalness={0.1} />
       </mesh>
 
@@ -160,22 +186,17 @@ const CakeModel = ({ cakeType = 'chocolate' }: { cakeType: string }) => {
         );
       })}
 
-      {/* Sprinkles scattered on top */}
-      {[...Array(30)].map((_, i) => {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = Math.random() * 0.85;
-        const sprinkleColors = ['#ff1493', '#00bfff', '#ffd700', '#32cd32', '#ff6347'];
-        return (
-          <mesh 
-            key={`sprinkle-${i}`} 
-            position={[Math.cos(angle) * radius, 1.95, Math.sin(angle) * radius]}
-            rotation={[Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI]}
-          >
-            <capsuleGeometry args={[0.015, 0.04, 4, 8]} />
-            <meshStandardMaterial color={sprinkleColors[i % sprinkleColors.length]} roughness={0.3} />
-          </mesh>
-        );
-      })}
+      {/* Sprinkles scattered on top - using pre-computed deterministic data */}
+      {SPRINKLE_DATA.map((sprinkle, i) => (
+        <mesh 
+          key={`sprinkle-${i}`} 
+          position={[Math.cos(sprinkle.angle) * sprinkle.radius, 1.95, Math.sin(sprinkle.angle) * sprinkle.radius]}
+          rotation={[sprinkle.rotX, sprinkle.rotY, sprinkle.rotZ]}
+        >
+          <capsuleGeometry args={[0.015, 0.04, 4, 8]} />
+          <meshStandardMaterial color={SPRINKLE_COLORS[i % SPRINKLE_COLORS.length]} roughness={0.3} />
+        </mesh>
+      ))}
     </group>
   );
 };
@@ -226,6 +247,8 @@ export const Cake3DViewer = ({ isOpen, onClose, cakeName, cakeType = 'chocolate'
             <div className="w-full h-full">
               <Canvas
                 shadows
+                dpr={[1, 1.5]}
+                frameloop="demand"
                 camera={{ position: [5, 4, 5], fov: 45 }}
                 gl={{ antialias: true }}
               >
